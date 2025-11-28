@@ -34,9 +34,10 @@ io.on('connection', (socket) => {
   handleSocketConnection(socket, io);
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
+
 server.listen(PORT, () => {
-  console.log(`DrawBattle server running on port ${PORT}`);
+  console.log("Server running on port", PORT);
 });
 
 module.exports = { app, server, io };
