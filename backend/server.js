@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const path = require('path');
 const { handleSocketConnection } = require('./socket/socketHandler');
 
 dotenv.config();
@@ -23,6 +24,9 @@ const io = new Server(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, "public")));
 
 // Root endpoint for Render health checks
 app.get('/', (req, res) => {
