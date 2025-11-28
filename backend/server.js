@@ -24,6 +24,11 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
+// Root endpoint for Render health checks
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'DrawBattle server is running' });
+});
+
 // Basic health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'DrawBattle server is running' });
