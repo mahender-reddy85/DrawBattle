@@ -1,66 +1,131 @@
-const Room = require('../models/Room');
-const Message = require('../models/Message');
-
-// Store active rooms and their data
+// Store active rooms and their data in memory
 const activeRooms = new Map();
 
 function handleSocketConnection(socket, io) {
   console.log('User connected:', socket.id);
 
-  // Join room
-  socket.on('join-room', async (data) => {
+  // Create room
+  socket.on('create-room', (data) => {
     try {
-      const { roomCode, username, avatar } = data;
+      const { roomName, username, avatar, maxPlayers = 8, rounds = 3 } = data;
 
-      socket.join(roomCode);
-      console.log(`${username} joined room ${roomCode}`);
+      // Generate unique room code
+      let roomCode;
+      do {
+        roomCode = generateRoomCode();
+      } while (activeRooms.has(roomCode));
 
-      // Get room data
-      const room = await Room.findOne({ code: roomCode.toUpperCase() });
-      if (!room) {
-        socket.emit('error', { message: 'Room not found' });
-        return;
-      }
+      // Create room data
+      const roomData = {
+        id: roomCode,
+        name: roomName,
+        code: roomCode,
+        host: socket.id,
+        players: new Map(),
+        messages: [],
+        maxPlayers,
+        rounds,
+        currentRound: 0,
+        currentDrawer: null,
+        currentWord: null,
+        timeLeft: 60,
+        gameState: 'waiting',
+        settings: {
+          drawTime: 60,
+          difficulty: 'medium'
+        }
+      };
 
-      // Initialize room data if not exists
-      if (!activeRooms.has(roomCode)) {
-        activeRooms.set(roomCode, {
-          players: new Map(),
-          messages: [],
-          currentDrawer: null,
-          currentWord: null,
-          timeLeft: room.drawTime,
-          gameState: 'waiting'
-        });
-      }
+      activeRooms.set(roomCode, roomData);
 
-      const roomData = activeRooms.get(roomCode);
-
-      // Add player to room data
+      // Add host as first player
       roomData.players.set(socket.id, {
         id: socket.id,
         username,
         avatar: avatar || 0,
         score: 0,
-        isDrawer: false
+        isDrawer: false,
+        isHost: true
       });
 
-      // Update player count in database
-      await Room.findByIdAndUpdate(room._id, {
-        $inc: { playerCount: 1 }
+      socket.join(roomCode);
+
+      // Send room created confirmation
+      socket.emit('room-created', {
+        room: {
+          id: roomData.id,
+          name: roomData.name,
+          code: roomData.code,
+          players: Array.from(roomData.players.values()),
+          maxPlayers: roomData.maxPlayers,
+          rounds: roomData.rounds,
+          gameState: roomData.gameState
+        }
+      });
+
+      console.log(`Room ${roomCode} created by ${username}`);
+
+    } catch (error) {
+      console.error('Create room error:', error);
+      socket.emit('error', { message: 'Failed to create room' });
+    }
+  });
+
+  // Join room
+  socket.on('join-room', (data) => {
+    try {
+      const { roomCode, username, avatar } = data;
+
+      const roomData = activeRooms.get(roomCode.toUpperCase());
+      if (!roomData) {
+        socket.emit('error', { message: 'Room not found' });
+        return;
+      }
+
+      if (roomData.gameState !== 'waiting') {
+        socket.emit('error', { message: 'Game already in progress' });
+        return;
+      }
+
+      if (roomData.players.size >= roomData.maxPlayers) {
+        socket.emit('error', { message: 'Room is full' });
+        return;
+      }
+
+      // Check if username is already taken
+      const existingPlayer = Array.from(roomData.players.values())
+        .find(p => p.username === username);
+      if (existingPlayer) {
+        socket.emit('error', { message: 'Username already taken in this room' });
+        return;
+      }
+
+      socket.join(roomCode);
+
+      // Add player to room
+      roomData.players.set(socket.id, {
+        id: socket.id,
+        username,
+        avatar: avatar || 0,
+        score: 0,
+        isDrawer: false,
+        isHost: false
       });
 
       // Send current room state to new player
       socket.emit('room-joined', {
         room: {
-          id: room._id,
-          name: room.name,
-          code: room.code,
+          id: roomData.id,
+          name: roomData.name,
+          code: roomData.code,
           players: Array.from(roomData.players.values()),
           messages: roomData.messages,
           currentDrawer: roomData.currentDrawer,
           timeLeft: roomData.timeLeft,
-          gameState: roomData.gameState
+          gameState: roomData.gameState,
+          currentRound: roomData.currentRound,
+          maxPlayers: roomData.maxPlayers,
+          rounds: roomData.rounds
         }
       });
 
@@ -69,6 +134,8 @@ function handleSocketConnection(socket, io) {
         player: roomData.players.get(socket.id)
       });
 
+      console.log(`${username} joined room ${roomCode}`);
+
     } catch (error) {
       console.error('Join room error:', error);
       socket.emit('error', { message: 'Failed to join room' });
@@ -76,34 +143,35 @@ function handleSocketConnection(socket, io) {
   });
 
   // Leave room
-  socket.on('leave-room', async (data) => {
+  socket.on('leave-room', (data) => {
     try {
       const { roomCode } = data;
 
       console.log(`User ${socket.id} left room ${roomCode}`);
 
-      if (activeRooms.has(roomCode)) {
-        const roomData = activeRooms.get(roomCode);
+      const roomData = activeRooms.get(roomCode);
+      if (roomData) {
         roomData.players.delete(socket.id);
 
-        // If no players left, clean up
+        // If no players left, clean up room
         if (roomData.players.size === 0) {
           activeRooms.delete(roomCode);
+          clearInterval(roomData.timer);
         } else {
+          // If host left, assign new host
+          const hostLeft = !roomData.players.has(roomData.host);
+          if (hostLeft) {
+            const remainingPlayers = Array.from(roomData.players.values());
+            roomData.host = remainingPlayers[0].id;
+            remainingPlayers[0].isHost = true;
+          }
+
           // Notify remaining players
           socket.to(roomCode).emit('player-left', { playerId: socket.id });
         }
       }
 
       socket.leave(roomCode);
-
-      // Update database
-      const room = await Room.findOne({ code: roomCode.toUpperCase() });
-      if (room) {
-        await Room.findByIdAndUpdate(room._id, {
-          $inc: { playerCount: -1 }
-        });
-      }
 
     } catch (error) {
       console.error('Leave room error:', error);
@@ -121,28 +189,36 @@ function handleSocketConnection(socket, io) {
   });
 
   // Handle chat messages
-  socket.on('send-message', async (data) => {
+  socket.on('send-message', (data) => {
     try {
-      const { roomCode, message, username } = data;
-
-      if (!activeRooms.has(roomCode)) return;
+      const { roomCode, message } = data;
 
       const roomData = activeRooms.get(roomCode);
-      const player = roomData.players.get(socket.id);
+      if (!roomData) return;
 
+      const player = roomData.players.get(socket.id);
       if (!player) return;
 
       // Check if message is the correct word
       let isCorrect = false;
       if (roomData.currentWord &&
-          message.toLowerCase().trim() === roomData.currentWord.toLowerCase()) {
+          message.toLowerCase().trim() === roomData.currentWord.toLowerCase() &&
+          !player.isDrawer) {
         isCorrect = true;
 
         // Update player score
         player.score += Math.max(50, roomData.timeLeft * 2);
+        player.hasGuessed = true;
 
-        // Move to next round or end game
-        await handleCorrectGuess(roomCode, socket.id, io);
+        // Award points to drawer
+        const drawer = Array.from(roomData.players.values())
+          .find(p => p.isDrawer);
+        if (drawer) {
+          drawer.score += 25;
+        }
+
+        // Check if round is complete
+        handleCorrectGuess(roomCode, socket.id, io);
       }
 
       const messageData = {
@@ -152,17 +228,6 @@ function handleSocketConnection(socket, io) {
         timestamp: new Date(),
         isCorrect
       };
-
-      // Save message to database
-      const newMessage = new Message({
-        room: roomCode,
-        player: socket.id,
-        username: player.username,
-        message,
-        isCorrect,
-        timestamp: new Date()
-      });
-      await newMessage.save();
 
       // Add to room messages
       roomData.messages.push(messageData);
@@ -181,13 +246,19 @@ function handleSocketConnection(socket, io) {
   });
 
   // Start game
-  socket.on('start-game', async (data) => {
+  socket.on('start-game', (data) => {
     try {
       const { roomCode } = data;
 
-      if (!activeRooms.has(roomCode)) return;
-
       const roomData = activeRooms.get(roomCode);
+      if (!roomData) return;
+
+      // Only host can start game
+      if (roomData.host !== socket.id) {
+        socket.emit('error', { message: 'Only room host can start the game' });
+        return;
+      }
+
       const players = Array.from(roomData.players.values());
 
       if (players.length < 2) {
@@ -198,37 +269,35 @@ function handleSocketConnection(socket, io) {
       // Start the game
       roomData.gameState = 'playing';
       roomData.currentRound = 1;
-      roomData.timeLeft = 60; // Default draw time
+      roomData.timeLeft = roomData.settings.drawTime;
+
+      // Reset player states
+      players.forEach(p => {
+        p.hasGuessed = false;
+        p.isDrawer = false;
+      });
 
       // Select first drawer
       const firstDrawer = players[0];
       firstDrawer.isDrawer = true;
       roomData.currentDrawer = firstDrawer.id;
 
-      // Select random word (simplified - in real app, use word list)
+      // Select random word
       roomData.currentWord = getRandomWord();
-
-      // Update database
-      await Room.findOneAndUpdate(
-        { code: roomCode.toUpperCase() },
-        {
-          status: 'playing',
-          currentRound: 1,
-          currentWord: roomData.currentWord,
-          timeLeft: roomData.timeLeft
-        }
-      );
 
       // Notify all players
       io.to(roomCode).emit('game-started', {
         currentRound: roomData.currentRound,
         currentDrawer: roomData.currentDrawer,
+        currentWord: roomData.currentWord,
         timeLeft: roomData.timeLeft,
         players: players
       });
 
       // Start timer
       startRoundTimer(roomCode, io);
+
+      console.log(`Game started in room ${roomCode}`);
 
     } catch (error) {
       console.error('Start game error:', error);
@@ -251,12 +320,21 @@ function handleSocketConnection(socket, io) {
       if (roomData.players.has(socket.id)) {
         roomData.players.delete(socket.id);
 
-        // Notify other players
-        socket.to(roomCode).emit('player-left', { playerId: socket.id });
-
-        // Clean up empty rooms
+        // If no players left, clean up room
         if (roomData.players.size === 0) {
           activeRooms.delete(roomCode);
+          clearInterval(roomData.timer);
+        } else {
+          // If host left, assign new host
+          const hostLeft = !roomData.players.has(roomData.host);
+          if (hostLeft) {
+            const remainingPlayers = Array.from(roomData.players.values());
+            roomData.host = remainingPlayers[0].id;
+            remainingPlayers[0].isHost = true;
+          }
+
+          // Notify other players
+          socket.to(roomCode).emit('player-left', { playerId: socket.id });
         }
       }
     });
@@ -264,28 +342,22 @@ function handleSocketConnection(socket, io) {
 }
 
 // Helper function to handle correct guess
-async function handleCorrectGuess(roomCode, playerId, io) {
+function handleCorrectGuess(roomCode, playerId, io) {
   const roomData = activeRooms.get(roomCode);
   if (!roomData) return;
 
   const players = Array.from(roomData.players.values());
-  const currentDrawer = players.find(p => p.isDrawer);
 
-  // Award points to drawer
-  if (currentDrawer) {
-    currentDrawer.score += 25;
-  }
-
-  // Check if round is complete
+  // Check if all non-drawer players have guessed correctly
   const unguessedPlayers = players.filter(p => !p.hasGuessed && !p.isDrawer);
   if (unguessedPlayers.length === 0) {
     // Move to next round
-    await nextRound(roomCode, io);
+    nextRound(roomCode, io);
   }
 }
 
 // Move to next round
-async function nextRound(roomCode, io) {
+function nextRound(roomCode, io) {
   const roomData = activeRooms.get(roomCode);
   if (!roomData) return;
 
@@ -300,16 +372,10 @@ async function nextRound(roomCode, io) {
   roomData.currentRound++;
 
   // Check if game is over
-  const room = await Room.findOne({ code: roomCode.toUpperCase() });
-  if (roomData.currentRound > room.rounds) {
+  if (roomData.currentRound > roomData.rounds) {
     // End game
     roomData.gameState = 'finished';
-
-    // Update database
-    await Room.findOneAndUpdate(
-      { code: roomCode.toUpperCase() },
-      { status: 'finished' }
-    );
+    clearInterval(roomData.timer);
 
     io.to(roomCode).emit('game-finished', {
       players: players.sort((a, b) => b.score - a.score)
@@ -326,17 +392,7 @@ async function nextRound(roomCode, io) {
 
   // Select new word
   roomData.currentWord = getRandomWord();
-  roomData.timeLeft = 60;
-
-  // Update database
-  await Room.findOneAndUpdate(
-    { code: roomCode.toUpperCase() },
-    {
-      currentRound: roomData.currentRound,
-      currentWord: roomData.currentWord,
-      timeLeft: roomData.timeLeft
-    }
-  );
+  roomData.timeLeft = roomData.settings.drawTime;
 
   io.to(roomCode).emit('next-round', {
     currentRound: roomData.currentRound,
@@ -355,11 +411,16 @@ function startRoundTimer(roomCode, io) {
   const roomData = activeRooms.get(roomCode);
   if (!roomData) return;
 
-  const timer = setInterval(() => {
+  // Clear existing timer
+  if (roomData.timer) {
+    clearInterval(roomData.timer);
+  }
+
+  roomData.timer = setInterval(() => {
     roomData.timeLeft--;
 
     if (roomData.timeLeft <= 0) {
-      clearInterval(timer);
+      clearInterval(roomData.timer);
       // Time's up - move to next round
       nextRound(roomCode, io);
     } else {
@@ -367,18 +428,29 @@ function startRoundTimer(roomCode, io) {
       io.to(roomCode).emit('time-update', { timeLeft: roomData.timeLeft });
     }
   }, 1000);
-
-  // Store timer reference
-  roomData.timer = timer;
 }
 
-// Simple word list (in real app, use a proper word database)
+// Generate unique room code
+function generateRoomCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// Simple word list
 function getRandomWord() {
   const words = [
     'apple', 'banana', 'car', 'dog', 'elephant', 'flower', 'guitar',
     'house', 'ice cream', 'jungle', 'kite', 'lion', 'mountain', 'nose',
     'ocean', 'piano', 'queen', 'rainbow', 'sun', 'tree', 'umbrella',
-    'violin', 'whale', 'xylophone', 'yacht', 'zebra'
+    'violin', 'whale', 'xylophone', 'yacht', 'zebra', 'butterfly', 'castle',
+    'diamond', 'elephant', 'fireworks', 'garden', 'hamburger', 'island',
+    'jellyfish', 'kangaroo', 'lighthouse', 'moon', 'notebook', 'octopus',
+    'penguin', 'quilt', 'rocket', 'sunflower', 'telescope', 'unicorn',
+    'volcano', 'waterfall', 'x-ray', 'yogurt', 'zucchini'
   ];
   return words[Math.floor(Math.random() * words.length)];
 }
