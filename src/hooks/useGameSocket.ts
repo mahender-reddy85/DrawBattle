@@ -2,6 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { Player, Message } from "@/pages/GameRoom";
 import { toast } from "sonner";
 
+interface DrawingData {
+  x: number;
+  y: number;
+  color: string;
+  size: number;
+}
+
 export const useGameSocket = (roomCode: string, username: string, avatar: number) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -18,7 +25,7 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
 
     // Connect to WebSocket
     const ws = new WebSocket(
-      `${import.meta.env.VITE_WS_URL || 'ws://localhost:8080'}/game-socket`
+      `${import.meta.env.VITE_WS_URL || 'wss://drawbattle.onrender.com'}`
     );
 
     ws.onopen = () => {
