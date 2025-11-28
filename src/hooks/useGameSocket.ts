@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { io, Socket } from "socket.io-client";
 import { Player, Message } from "@/pages/GameRoom";
 import { toast } from "sonner";
 
@@ -18,135 +19,130 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
   const [gameState, setGameState] = useState<"waiting" | "playing">("waiting");
   const [isHost, setIsHost] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     if (!roomCode || !username) return;
 
-    // Connect to WebSocket
-    const ws = new WebSocket(
-      `${import.meta.env.VITE_WS_URL || 'wss://drawbattle.onrender.com'}`
-    );
+    // Connect to Socket.IO server
+    const socket = io(import.meta.env.VITE_WS_URL || "ws://localhost:3001", {
+      transports: ["websocket", "polling"],
+      secure: true,
+      rejectUnauthorized: false
+    });
 
-    ws.onopen = () => {
+    socket.on("connect", () => {
       console.log("Connected to game socket");
-      ws.send(
-        JSON.stringify({
-          type: "join",
-          roomCode,
-          username,
-          avatar,
-        })
-      );
-    };
+      socket.emit("join", {
+        roomCode,
+        username,
+        avatar,
+      });
+    });
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("Received:", data);
+    socket.on("init", (data) => {
+      setIsHost(data.isHost);
+      setPlayers(data.players);
+      setGameState(data.gameState);
+    });
 
-      switch (data.type) {
-        case "init":
-          setIsHost(data.isHost);
-          setPlayers(data.players);
-          setGameState(data.gameState);
-          break;
-        case "players":
-          setPlayers(data.players);
-          break;
-        case "gameStateChange":
-          setGameState(data.gameState);
-          break;
-        case "countdown":
-          setCountdown(data.count);
-          break;
-        case "message":
-          setMessages((prev) => [...prev, data.message]);
-          break;
-        case "correctGuess":
-          toast.success(`${data.username} guessed correctly!`);
-          setPlayers(data.players);
-          break;
-        case "drawing":
-          // Handle drawing data
-          break;
-        case "clear":
-          // Handle clear canvas
-          break;
-        case "roundStart":
-          setCurrentWord(data.word);
-          setIsDrawer(data.drawerId === data.playerId);
-          setTimeLeft(60);
-          setMessages([]);
-          break;
-        case "timeUpdate":
-          setTimeLeft(data.timeLeft);
-          break;
-        case "roundEnd":
-          toast.info(`Round ended! Word was: ${data.word}`);
-          break;
-      }
-    };
+    socket.on("players", (data) => {
+      setPlayers(data.players);
+    });
 
-    ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+    socket.on("gameStateChange", (data) => {
+      setGameState(data.gameState);
+    });
+
+    socket.on("countdown", (data) => {
+      setCountdown(data.count);
+    });
+
+    socket.on("message", (data) => {
+      setMessages((prev) => [...prev, data.message]);
+    });
+
+    socket.on("correctGuess", (data) => {
+      toast.success(`${data.username} guessed correctly!`);
+      setPlayers(data.players);
+    });
+
+    socket.on("drawing", (data) => {
+      // Handle drawing data
+    });
+
+    socket.on("clear", () => {
+      // Handle clear canvas
+    });
+
+    socket.on("roundStart", (data) => {
+      setCurrentWord(data.word);
+      setIsDrawer(data.drawerId === data.playerId);
+      setTimeLeft(60);
+      setMessages([]);
+    });
+
+    socket.on("timeUpdate", (data) => {
+      setTimeLeft(data.timeLeft);
+    });
+
+    socket.on("roundEnd", (data) => {
+      toast.info(`Round ended! Word was: ${data.word}`);
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
       toast.error("Connection error");
-    };
+    });
 
-    ws.onclose = () => {
+    socket.on("disconnect", () => {
       console.log("Disconnected from game socket");
-    };
+    });
 
-    wsRef.current = ws;
+    // Heartbeat for Render free tier
+    const heartbeat = setInterval(() => {
+      socket.emit("ping");
+    }, 25000);
+
+    socketRef.current = socket;
 
     return () => {
-      ws.close();
+      clearInterval(heartbeat);
+      socket.disconnect();
     };
   }, [roomCode, username, avatar]);
 
   const sendDrawing = (data: DrawingData) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "draw",
-          roomCode,
-          ...data,
-        })
-      );
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("draw", {
+        roomCode,
+        drawingData: data,
+      });
     }
   };
 
   const sendMessage = (message: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "guess",
-          roomCode,
-          username,
-          message,
-        })
-      );
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("send-message", {
+        roomCode,
+        message,
+      });
     }
   };
 
   const clearCanvas = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "clear",
-          roomCode,
-        })
-      );
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("clear-canvas", {
+        roomCode,
+      });
     }
   };
 
   const startGame = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: "startGame",
-          roomCode,
-        })
-      );
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("start-game", {
+        roomCode,
+      });
     }
   };
 

@@ -4,6 +4,9 @@ const activeRooms = new Map();
 function handleSocketConnection(socket, io) {
   console.log('User connected:', socket.id);
 
+  // Heartbeat for Render free tier
+  socket.on("ping", () => socket.emit("pong"));
+
   // Create room
   socket.on('create-room', (data) => {
     try {
