@@ -25,10 +25,8 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
     if (!roomCode || !username) return;
 
     // Connect to Socket.IO server
-    const socket = io(import.meta.env.VITE_WS_URL || "ws://localhost:3001", {
-      transports: ["websocket", "polling"],
-      secure: true,
-      rejectUnauthorized: false
+    const socket = io(import.meta.env.VITE_WS_URL || "https://drawbattle.onrender.com", {
+      transports: ["websocket", "polling"]
     });
 
     socket.on("connect", () => {
