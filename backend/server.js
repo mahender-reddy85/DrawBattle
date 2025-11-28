@@ -14,11 +14,15 @@ const io = new Server(server, {
   cors: {
     origin: [
       "https://draw-battle-peach.vercel.app",
+      "https://drawbattle.onrender.com",
       "http://localhost:3000"
     ],
     methods: ["GET", "POST"],
     credentials: true
-  }
+  },
+  pingInterval: 25000,
+  pingTimeout: 60000,
+  maxHttpBufferSize: 1e6
 });
 
 // Middleware
@@ -40,6 +44,7 @@ app.get('/api/health', (req, res) => {
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.id}, origin: ${socket.handshake.headers.origin}`);
   handleSocketConnection(socket, io);
 });
 

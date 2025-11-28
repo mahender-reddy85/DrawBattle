@@ -75,7 +75,7 @@ function handleSocketConnection(socket, io) {
   });
 
   // Join room
-  socket.on('join-room', (data) => {
+  socket.on('join', (data) => {
     try {
       const { roomCode, username, avatar } = data;
 
@@ -315,8 +315,9 @@ function handleSocketConnection(socket, io) {
   });
 
   // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+  socket.on('disconnect', (reason) => {
+    console.log(`User disconnected: ${socket.id}, reason: ${reason}`);
+  });
 
     // Remove from all rooms
     activeRooms.forEach((roomData, roomCode) => {

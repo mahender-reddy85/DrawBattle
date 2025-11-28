@@ -26,11 +26,16 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
 
     // Connect to Socket.IO server
     const socket = io(import.meta.env.VITE_WS_URL || "https://drawbattle.onrender.com", {
-      transports: ["websocket", "polling"]
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      autoConnect: true,
+      secure: true
     });
 
     socket.on("connect", () => {
-      console.log("Connected to game socket");
+      console.log("Connected to game socket id:", socket.id);
       socket.emit("join", {
         roomCode,
         username,
@@ -88,8 +93,8 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
       toast.info(`Round ended! Word was: ${data.word}`);
     });
 
-    socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
+    socket.on("connect_error", (err) => {
+      console.error("connect_error:", err.message || err);
       toast.error("Connection error");
     });
 
