@@ -104,18 +104,18 @@ export interface Message {
                 )}
               </div>
 
-              {/* Player list full width */}
+              {/* Chat full width under canvas */}
               <div className="w-full mb-4">
-                <PlayerList players={players} />
-              </div>
-
-              {/* Chat full width at bottom */}
-              <div className="w-full">
                 <ChatBox
                   messages={messages}
                   onSendMessage={sendMessage}
                   isDrawer={isDrawer}
                 />
+              </div>
+
+              {/* Player list full width at bottom */}
+              <div className="w-full">
+                <PlayerList players={players} />
               </div>
             </>
           ) : (
