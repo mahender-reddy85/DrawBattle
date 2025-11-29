@@ -24,8 +24,8 @@ export const JoinRoom = ({ onBack }: JoinRoomProps) => {
       return;
     }
 
-    if (roomCode.length !== 6) {
-      toast.error("Room code must be 6 characters");
+    if (roomCode.length !== 4) {
+      toast.error("Room code must be 4 characters");
       return;
     }
 
