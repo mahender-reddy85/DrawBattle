@@ -77,10 +77,10 @@ export const JoinRoom = ({ onBack }: JoinRoomProps) => {
           <Label htmlFor="roomCode">Room Code</Label>
           <Input
             id="roomCode"
-            placeholder="6-character code"
+            placeholder="4-character code"
             value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value.toUpperCase().slice(0, 6))}
-            maxLength={6}
+            onChange={(e) => setRoomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4))}
+            maxLength={4}
             className="h-12 text-lg text-center tracking-widest font-bold"
             onKeyDown={(e) => e.key === "Enter" && handleJoinRoom()}
           />
