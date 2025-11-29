@@ -6,7 +6,7 @@ interface DrawingData {
   x: number;
   y: number;
   color: string;
-  brushSize: number;
+  size: number;
   type: "start" | "draw";
 }
 
@@ -91,7 +91,7 @@ export const GameCanvas = ({ isDrawer, onDraw, onClear }: GameCanvasProps) => {
       x: x / canvas.width,
       y: y / canvas.height,
       color,
-      brushSize,
+      size: brushSize,
       type: e.type === "mousedown" || e.type === "touchstart" ? "start" : "draw",
     });
   };

@@ -16,6 +16,7 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
   const [currentWord, setCurrentWord] = useState("");
   const [timeLeft, setTimeLeft] = useState(60);
   const [isDrawer, setIsDrawer] = useState(false);
+  const [currentDrawer, setCurrentDrawer] = useState<Player | null>(null);
   const [gameState, setGameState] = useState<"waiting" | "playing">("waiting");
   const [isHost, setIsHost] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -80,7 +81,9 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
 
     socket.on("roundStart", (data) => {
       setCurrentWord(data.word);
-      setIsDrawer(data.drawerId === data.playerId);
+      setIsDrawer(data.drawerId === socket.id);
+      const drawerPlayer = data.players.find((p: Player) => p.id === data.drawerId);
+      setCurrentDrawer(drawerPlayer || null);
       setTimeLeft(60);
       setMessages([]);
     });
@@ -155,6 +158,7 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
     currentWord,
     timeLeft,
     isDrawer,
+    currentDrawer,
     gameState,
     isHost,
     countdown,
