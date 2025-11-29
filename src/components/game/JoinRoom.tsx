@@ -24,8 +24,8 @@ export const JoinRoom = ({ onBack }: JoinRoomProps) => {
       return;
     }
 
-    if (roomCode.length !== 4) {
-      toast.error("Room code must be 4 digits");
+    if (roomCode.length !== 6) {
+      toast.error("Room code must be 6 characters");
       return;
     }
 
@@ -77,10 +77,10 @@ export const JoinRoom = ({ onBack }: JoinRoomProps) => {
           <Label htmlFor="roomCode">Room Code</Label>
           <Input
             id="roomCode"
-            placeholder="4-digit code"
+            placeholder="6-character code"
             value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value.replace(/\D/g, "").slice(0, 4))}
-            maxLength={4}
+            onChange={(e) => setRoomCode(e.target.value.toUpperCase().slice(0, 6))}
+            maxLength={6}
             className="h-12 text-lg text-center tracking-widest font-bold"
             onKeyDown={(e) => e.key === "Enter" && handleJoinRoom()}
           />
