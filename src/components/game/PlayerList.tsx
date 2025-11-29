@@ -37,10 +37,9 @@ export const PlayerList = ({ players }: PlayerListProps) => {
                 )}
               </div>
               <div>
-                <p className="font-medium">{player.username}</p>
-                {index === 0 && (
-                  <p className="text-xs text-accent">Top Player</p>
-                )}
+                <p className="font-medium flex items-center gap-2">
+                  #{index + 1} {player.username}
+                </p>
               </div>
             </div>
             <div className="text-right">

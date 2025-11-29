@@ -38,6 +38,7 @@ export interface Message {
       currentWord,
       timeLeft,
       isDrawer,
+      currentDrawer,
       gameState,
       isHost,
       countdown,
