@@ -93,10 +93,10 @@ export interface Message {
                   onDraw={sendDrawing}
                   onClear={socketClearCanvas}
                 />
-                {currentDrawer && gameState === 'playing' && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 z-10 rounded-xl">
-                    <div className="w-24 h-24 rounded-full bg-yellow-400 flex items-center justify-center mb-4 shadow-lg">
-                      <span className="text-3xl font-bold text-black">{currentDrawer.username.charAt(0).toUpperCase()}</span>
+                {currentDrawer && gameState === 'playing' && !isDrawer && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 z-10 wobbly-border">
+                    <div className="w-24 h-24 rounded-full bg-yellow-400 flex items-center justify-center mb-4 shadow-cartoon drawn-avatar" style={{borderColor: 'yellow'}}>
+                      <span className="text-3xl font-bold text-black relative z-10">{currentDrawer.username.charAt(0).toUpperCase()}</span>
                     </div>
                     <h2 className="text-2xl font-bold text-white text-center mb-2">{currentDrawer.username} choosing a word!</h2>
                     <p className="text-white text-center text-lg">Please wait...</p>

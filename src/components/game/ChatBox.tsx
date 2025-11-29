@@ -25,7 +25,7 @@ export const ChatBox = ({ messages, onSendMessage, isDrawer }: ChatBoxProps) => 
   };
 
   return (
-    <div className="card-gradient rounded-2xl p-4 shadow-card border border-border h-full flex flex-col">
+    <div className="sketchy-card rounded-2xl p-4 shadow-cartoon h-full flex flex-col hand-drawn-border">
       <h2 className="text-xl font-bold mb-4">
         {isDrawer ? "Chat" : "Guess the word!"}
       </h2>
@@ -35,9 +35,9 @@ export const ChatBox = ({ messages, onSendMessage, isDrawer }: ChatBoxProps) => 
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`p-2 rounded-lg ${
+            className={`p-2 rounded-xl hand-drawn-border ${
               msg.isCorrect
-                ? "bg-success/20 border border-success"
+                ? "bg-success/20"
                 : "bg-muted/50"
             }`}
           >
@@ -69,16 +69,19 @@ export const ChatBox = ({ messages, onSendMessage, isDrawer }: ChatBoxProps) => 
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Type your guess..."
-            className="flex-1"
+            placeholder="Type your guess here..."
+            className="flex-1 pill-shape hand-drawn-border"
             maxLength={50}
           />
           <Button
             onClick={handleSend}
-            className="game-gradient"
+            className="game-gradient pill-shape hand-drawn-border"
             disabled={!input.trim()}
           >
-            <Send className="w-4 h-4" />
+            <svg className="w-4 h-4 drawn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </Button>
         </div>
       )}

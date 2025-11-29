@@ -41,7 +41,7 @@ export const GameCanvas = ({ isDrawer, onDraw, onClear }: GameCanvasProps) => {
 
       canvas.width = container.clientWidth;
       canvas.height = container.clientHeight;
-      ctx.fillStyle = "#FFFFFF";
+      ctx.fillStyle = "#f7f7f7";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     };
 
@@ -101,13 +101,13 @@ export const GameCanvas = ({ isDrawer, onDraw, onClear }: GameCanvasProps) => {
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
 
-    ctx.fillStyle = "#FFFFFF";
+    ctx.fillStyle = "#f7f7f7";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     onClear();
   };
 
   return (
-    <div className="h-full flex flex-col gap-3 card-gradient rounded-2xl p-4 shadow-card border border-border">
+    <div className="h-full flex flex-col gap-3 sketchy-card rounded-2xl p-4 shadow-cartoon hand-drawn-border">
       {/* Toolbar */}
       {isDrawer && (
         <div className="flex items-center gap-3 flex-wrap">
@@ -116,7 +116,7 @@ export const GameCanvas = ({ isDrawer, onDraw, onClear }: GameCanvasProps) => {
             {colors.map((c) => (
               <button
                 key={c}
-                className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
+                className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 pill-shape hand-drawn-border ${
                   color === c ? "border-primary scale-110" : "border-border"
                 }`}
                 style={{ backgroundColor: c }}
@@ -133,7 +133,7 @@ export const GameCanvas = ({ isDrawer, onDraw, onClear }: GameCanvasProps) => {
               max="20"
               value={brushSize}
               onChange={(e) => setBrushSize(Number(e.target.value))}
-              className="w-24"
+              className="w-24 accent-primary"
             />
             <span className="text-sm text-muted-foreground w-8">{brushSize}px</span>
           </div>
@@ -144,24 +144,34 @@ export const GameCanvas = ({ isDrawer, onDraw, onClear }: GameCanvasProps) => {
               size="sm"
               variant="outline"
               onClick={() => setColor("#FFFFFF")}
+              className="pill-shape hand-drawn-border"
             >
-              <Eraser className="w-4 h-4" />
+              <svg className="w-4 h-4 drawn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 21H21V3H3V21ZM5 5H19V19H5V5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M8 8H16V16H8V8Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </Button>
             <Button
               size="sm"
               variant="destructive"
               onClick={handleClear}
+              className="pill-shape hand-drawn-border"
             >
-              <Trash2 className="w-4 h-4" />
+              <svg className="w-4 h-4 drawn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 6H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10 11V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 11V17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </Button>
           </div>
         </div>
       )}
 
       {/* Canvas */}
-      <div className="flex-1 bg-white rounded-xl overflow-hidden relative">
+      <div className="flex-1 canvas-texture wobbly-border rounded-xl overflow-hidden relative">
         {!isDrawer && (
-          <div className="absolute inset-0 bg-black/5 pointer-events-none z-10" />
+          <div className="absolute inset-0 bg-black/30 pointer-events-none z-10" />
         )}
         <canvas
           ref={canvasRef}

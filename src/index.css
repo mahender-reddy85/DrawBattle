@@ -6,15 +6,17 @@
 All colors MUST be HSL.
 */
 
+@import url('https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Comic+Neue:wght@400;700&display=swap');
+
 @layer base {
   :root {
-    --background: 222 47% 11%;
+    --background: 220 20% 15%; /* Dark navy */
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 15%;
+    --card: 220 20% 20%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 15%;
+    --popover: 220 20% 20%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 217 91% 60%;
@@ -42,10 +44,11 @@ All colors MUST be HSL.
     --success-foreground: 210 40% 98%;
     
     --game-gradient: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(271 81% 56%) 100%);
-    --card-gradient: linear-gradient(180deg, hsl(222 47% 17%) 0%, hsl(222 47% 13%) 100%);
+    --card-gradient: linear-gradient(180deg, hsl(220 20% 25%) 0%, hsl(220 20% 15%) 100%);
     
     --shadow-glow: 0 0 40px hsl(217 91% 60% / 0.3);
     --shadow-card: 0 10px 30px -10px hsl(0 0% 0% / 0.5);
+    --shadow-cartoon: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
 
     --sidebar-background: 0 0% 98%;
 
@@ -62,6 +65,10 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Scribbly styles */
+    --scribbly-border: 3px solid #fff;
+    --hand-drawn-shadow: 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .light {
@@ -101,16 +108,17 @@ All colors MUST be HSL.
 
     --shadow-glow: 0 0 40px hsl(217 91% 60% / 0.3);
     --shadow-card: 0 10px 30px -10px hsl(0 0% 0% / 0.1);
+    --shadow-cartoon: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   .dark {
-    --background: 222 47% 11%;
+    --background: 220 20% 15%;
     --foreground: 210 40% 98%;
 
-    --card: 222 47% 15%;
+    --card: 220 20% 20%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 15%;
+    --popover: 220 20% 20%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 217 91% 60%;
@@ -141,7 +149,7 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Patrick Hand', 'Comic Neue', cursive, sans-serif;
   }
 }
 
@@ -161,4 +169,128 @@ All colors MUST be HSL.
   .shadow-card {
     box-shadow: var(--shadow-card);
   }
+
+  .shadow-cartoon {
+    box-shadow: var(--shadow-cartoon);
+  }
+
+  /* Hand-drawn border using SVG filter for rough edges */
+  .hand-drawn-border {
+    filter: url(#roughen);
+    border: var(--scribbly-border);
+    box-shadow: var(--hand-drawn-shadow);
+  }
+
+  /* Scribbly card background */
+  .scribbly-card {
+    background: var(--card);
+    position: relative;
+  }
+
+  .scribbly-card::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #fff, #f0f0f0, #fff);
+    border-radius: inherit;
+    z-index: -1;
+    filter: blur(1px);
+  }
+
+  /* Pill shape with squiggly edges */
+  .pill-shape {
+    border-radius: 50px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pill-shape::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: inherit;
+    clip-path: polygon(
+      0% 20%, 5% 0%, 95% 0%, 100% 20%,
+      100% 80%, 95% 100%, 5% 100%, 0% 80%
+    );
+    z-index: -1;
+  }
+
+  /* Drawn icon style */
+  .drawn-icon {
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+  }
+
+  /* Wobbly canvas border */
+  .wobbly-border {
+    clip-path: polygon(
+      2% 0%, 98% 0%, 100% 2%, 100% 98%, 98% 100%, 2% 100%, 0% 98%, 0% 2%
+    );
+    border: 4px solid #fff;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.2);
+  }
+
+  /* Textured white background for canvas */
+  .canvas-texture {
+    background: #f7f7f7 url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>') repeat;
+  }
+
+  /* Sketchy player card */
+  .sketchy-card {
+    border: 3px solid #fff;
+    background: var(--card);
+    position: relative;
+  }
+
+  .sketchy-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.5), transparent);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    z-index: -1;
+  }
+
+  /* Doodle crown */
+  .doodle-crown {
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+  }
+
+  /* Drawn avatar circle */
+  .drawn-avatar {
+    border: 3px solid #fff;
+    background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+    position: relative;
+  }
+
+  .drawn-avatar::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    background: #fff;
+    border-radius: 50%;
+    z-index: -1;
+    filter: blur(1px);
+  }
+}
+
+/* SVG filter for roughen effect */
+svg {
+  overflow: visible;
+}
+
+#roughen-filter {
+  filter: url(#roughen);
 }
