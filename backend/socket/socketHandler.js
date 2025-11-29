@@ -317,7 +317,6 @@ function handleSocketConnection(socket, io) {
   // Handle disconnection
   socket.on('disconnect', (reason) => {
     console.log(`User disconnected: ${socket.id}, reason: ${reason}`);
-  });
 
     // Remove from all rooms
     activeRooms.forEach((roomData, roomCode) => {
