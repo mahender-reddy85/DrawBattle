@@ -87,7 +87,7 @@ export interface Message {
             <>
               {/* Mobile: Vertical stack */}
               {/* Canvas with overlay */}
-              <div className="flex-1 relative min-h-[400px] mb-4">
+              <div className="flex-1 relative min-h-[500px] mb-4">
                 <GameCanvas
                   isDrawer={isDrawer}
                   onDraw={sendDrawing}
