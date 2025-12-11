@@ -22,25 +22,61 @@ if (process.env.NODE_ENV === 'development') {
 
 console.log('Allowed CORS origins:', allowedOrigins);
 
+// Create Socket.IO server with enhanced CORS configuration
 const io = new Server(server, {
   cors: {
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
       
-      if (allowedOrigins.indexOf(origin) === -1) {
-        const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-        return callback(new Error(msg), false);
+      const originUrl = new URL(origin);
+      const isAllowed = allowedOrigins.some(allowedOrigin => {
+        const allowedUrl = new URL(allowedOrigin);
+        return originUrl.origin === allowedUrl.origin;
+      });
+      
+      if (isAllowed || allowedOrigins.includes('*')) {
+        return callback(null, true);
       }
-      return callback(null, true);
+      
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
   },
+  path: '/socket.io/',
   pingInterval: 25000,
   pingTimeout: 60000,
-  maxHttpBufferSize: 1e6
+  maxHttpBufferSize: 1e6,
+  connectTimeout: 10000,
+  serveClient: false,
+  allowUpgrades: true,
+  cookie: false
+});
+
+// Log connection events
+io.engine.on("connection_error", (err) => {
+  console.error('Socket.IO connection error:', err);
+});
+
+// Handle socket connections
+io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.id}, origin: ${socket.handshake.headers.origin}`);
+  handleSocketConnection(socket, io);
+  
+  // Handle disconnection
+  socket.on('disconnect', (reason) => {
+    console.log(`User disconnected: ${socket.id}, reason: ${reason}`);
+  });
+  
+  // Heartbeat for Render free tier
+  socket.on('ping', (cb) => {
+    if (typeof cb === 'function') {
+      cb();
+    }
+  });
 });
 
 // Configure CORS for HTTP requests

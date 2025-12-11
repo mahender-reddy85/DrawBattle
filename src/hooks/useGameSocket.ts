@@ -25,24 +25,81 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
   useEffect(() => {
     if (!roomCode || !username) return;
 
-    // Connect to Socket.IO server
-    const socket = io(import.meta.env.VITE_WS_URL || "https://drawbattle.onrender.com", {
-      transports: ["websocket", "polling"],
+    // Determine WebSocket URL based on environment
+    const isProduction = import.meta.env.PROD;
+    const wsUrl = isProduction
+      ? 'https://drawbattle.onrender.com' // Use HTTPS for production
+      : 'http://localhost:3001';
+
+    console.log(`Initializing WebSocket connection to: ${wsUrl}`);
+
+    // Connect to Socket.IO server with enhanced configuration
+    const socket = io(wsUrl, {
+      path: '/socket.io/',
+      transports: ['websocket', 'polling'], // Try WebSocket first, fall back to polling
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 10000,
       autoConnect: true,
-      secure: true
+      secure: isProduction,
+      withCredentials: true,
+      forceNew: true,
+      rejectUnauthorized: false // Only for development with self-signed certs
     });
 
-    socket.on("connect", () => {
-      console.log("Connected to game socket id:", socket.id);
-      socket.emit("join", {
-        roomCode,
-        username,
-        avatar,
+    // Store socket reference
+    socketRef.current = socket;
+
+    // Connection established
+    const onConnect = () => {
+      console.log("Connected to game server. Socket ID:", socket.id);
+      toast.success("Connected to game server");
+      
+      // Join the room
+      socket.emit("join", { roomCode, username, avatar }, (response: any) => {
+        if (response?.error) {
+          console.error("Join error:", response.error);
+          toast.error(response.error);
+        } else {
+          console.log("Successfully joined room:", roomCode);
+        }
       });
-    });
+    };
+
+    // Connection error
+    const onConnectError = (error: any) => {
+      console.error("Connection error:", error);
+      toast.error("Failed to connect to game server");
+    };
+
+    // Disconnected
+    const onDisconnect = (reason: string) => {
+      console.log("Disconnected:", reason);
+      if (reason === 'io server disconnect') {
+        // Reconnect if server disconnects us
+        socket.connect();
+      }
+    };
+
+    // Reconnection events
+    const onReconnectAttempt = (attempt: number) => {
+      console.log(`Reconnection attempt ${attempt}`);
+      toast.loading(`Reconnecting... (${attempt}/5)`);
+    };
+
+    const onReconnectFailed = () => {
+      console.error("Failed to reconnect to server");
+      toast.error("Connection lost. Please refresh the page.");
+    };
+
+    // Set up event listeners
+    socket.on('connect', onConnect);
+    socket.on('connect_error', onConnectError);
+    socket.on('disconnect', onDisconnect);
+    socket.on('reconnect_attempt', onReconnectAttempt);
+    socket.on('reconnect_failed', onReconnectFailed);
 
     socket.on("init", (data) => {
       setIsHost(data.isHost);
