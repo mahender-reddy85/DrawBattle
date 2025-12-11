@@ -1,15 +1,29 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
-const { handleSocketConnection } = require('./socket/socketHandler');
+import express from 'express';
+import http from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { handleSocketConnection } from './socket/socketHandler.js';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const app = express();
 const server = http.createServer(app);
+
+// Serve static files from the frontend build
+const frontendBuildPath = path.join(path.resolve(), '../dist');
+app.use(express.static(frontendBuildPath));
+
+// Handle SPA routing - return the main index.html for any route that doesn't match a file
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendBuildPath, 'index.html'));
+});
 // Parse allowed origins from environment variable
 const allowedOrigins = process.env.FRONTEND_URLS
   ? process.env.FRONTEND_URLS.split(',').map(url => url.trim())
