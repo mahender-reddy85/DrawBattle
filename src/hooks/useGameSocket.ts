@@ -28,7 +28,7 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
     // Determine WebSocket URL based on environment
     const isProduction = import.meta.env.PROD;
     const wsUrl = isProduction
-      ? 'https://drawbattle.onrender.com' // Use HTTPS for production
+      ? 'wss://drawbattle.onrender.com' // Use WSS for WebSocket in production
       : 'http://localhost:3001';
 
     console.log(`Initializing WebSocket connection to: ${wsUrl}`);
@@ -38,15 +38,21 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
       path: '/socket.io/',
       transports: ['websocket', 'polling'], // Try WebSocket first, fall back to polling
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10, // Increased from 5 to 10
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 10000,
+      reconnectionDelayMax: 10000, // Increased from 5000 to 10000
+      timeout: 15000, // Increased from 10000 to 15000
       autoConnect: true,
       secure: isProduction,
       withCredentials: true,
       forceNew: true,
-      rejectUnauthorized: false // Only for development with self-signed certs
+      rejectUnauthorized: false, // Only for development with self-signed certs
+      // Additional options for better connection stability
+      upgrade: true,
+      rememberUpgrade: true,
+      perMessageDeflate: {
+        threshold: 1024 // Size threshold (in bytes) for compression
+      }
     });
 
     // Store socket reference

@@ -25,34 +25,61 @@ console.log('Allowed CORS origins:', allowedOrigins);
 // Create Socket.IO server with enhanced CORS configuration
 const io = new Server(server, {
   cors: {
-    origin: (origin, callback) => {
+    origin: function(origin, callback) {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
       
-      const originUrl = new URL(origin);
-      const isAllowed = allowedOrigins.some(allowedOrigin => {
-        const allowedUrl = new URL(allowedOrigin);
-        return originUrl.origin === allowedUrl.origin;
-      });
-      
-      if (isAllowed || allowedOrigins.includes('*')) {
+      // Check if the origin is in the allowed list
+      if (allowedOrigins.includes('*')) {
         return callback(null, true);
       }
       
+      try {
+        const originUrl = new URL(origin);
+        const isAllowed = allowedOrigins.some(allowedOrigin => {
+          try {
+            const allowedUrl = new URL(allowedOrigin);
+            return originUrl.origin === allowedUrl.origin;
+          } catch (e) {
+            console.warn(`Invalid allowed origin URL: ${allowedOrigin}`);
+            return false;
+          }
+        });
+        
+        if (isAllowed) {
+          return callback(null, true);
+        }
+      } catch (e) {
+        console.warn(`Error processing origin: ${origin}`, e);
+      }
+      
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      console.warn(`CORS error: ${msg}`, { origin, allowedOrigins });
       return callback(new Error(msg), false);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: []
   },
   path: '/socket.io/',
-  pingInterval: 25000,
-  pingTimeout: 60000,
-  maxHttpBufferSize: 1e6,
-  connectTimeout: 10000,
-  serveClient: false,
+  // Connection settings
+  pingTimeout: 60000,    // 60 seconds
+  pingInterval: 25000,   // 25 seconds
+  // Message handling
+  maxHttpBufferSize: 1e8, // 100MB
+  maxPayload: 1e8,       // 100MB
+  // Transport settings
+  transports: ['websocket', 'polling'], // Try WebSocket first, fall back to polling
   allowUpgrades: true,
+  // Compression
+  httpCompression: true,
+  perMessageDeflate: {
+    threshold: 1024 // Only compress messages larger than 1KB
+  },
+  // Other options
+  connectTimeout: 10000,  // 10 seconds
+  serveClient: false,
   cookie: false
 });
 
