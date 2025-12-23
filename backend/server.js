@@ -94,4 +94,4 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('\nPress Ctrl+C to stop the server\n');
 });
 
-module.exports = { app, server, io };
+export { app, server, io };

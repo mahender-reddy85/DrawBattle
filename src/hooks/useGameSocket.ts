@@ -64,7 +64,7 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
       toast.success("Connected to game server");
       
       // Join the room
-      socket.emit("join", { roomCode, username, avatar }, (response: any) => {
+      socket.emit("join", { roomCode, username, avatar }, (response: { error?: string }) => {
         if (response?.error) {
           console.error("Join error:", response.error);
           toast.error(response.error);
@@ -75,7 +75,7 @@ export const useGameSocket = (roomCode: string, username: string, avatar: number
     };
 
     // Connection error
-    const onConnectError = (error: any) => {
+    const onConnectError = (error: Error) => {
       console.error("Connection error:", error);
       toast.error("Failed to connect to game server");
     };
