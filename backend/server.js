@@ -4,6 +4,7 @@ import path from "path";
 import { Server } from "socket.io";
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { handleSocketConnection } from './socket/socketHandler.js';
 
 // Load environment variables
@@ -12,9 +13,16 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-// IMPORTANT: Resolve the current directory for ES modules
+// Get the current directory
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = dirname(__filename);
+
+// Serve static files from the dist directory
+app.use(express.static(join(__dirname, '..', 'dist'), {
+  maxAge: '1y',
+  etag: true,
+  index: 'index.html'
+}));
 
 // PRODUCTION-SAFE CORS
 const allowedOrigins = [
@@ -66,6 +74,11 @@ app.get('/api/health', (req, res) => {
     message: 'DrawBattle server is running',
     timestamp: new Date().toISOString()
   });
+});
+
+// Handle SPA routing - serve index.html for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(join(__dirname, '..', 'dist', 'index.html'));
 });
 
 // Socket.IO connection handler
